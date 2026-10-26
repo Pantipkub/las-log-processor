@@ -1,3 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- Parsing, conditioning and reporting. No external dependencies. -->
+
+  <ItemGroup>
+    <!-- Editable data file, copied next to every exe/test that references Core. -->
+    <None Update="curve_catalog.csv" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

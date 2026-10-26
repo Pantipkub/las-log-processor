@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 
 namespace LasLogs.Core
 {
@@ -9,7 +10,18 @@ namespace LasLogs.Core
         Failed,   // no usable data
     }
 
-    /// <summary>A LAS file as read: raw values, no null policy or unit handling applied.</summary>
+    public enum DepthOrder
+    {
+        Unknown,       // fewer than 2 records, or every depth the same
+        Increasing,
+        Decreasing,    // reversed by the Conditioner
+        NonMonotonic,  // kept in file order
+    }
+
+    /// <summary>
+    /// A LAS file. The reader leaves values raw; <see cref="Conditioner.Run"/> then applies the null policy and depth
+    /// order in place and fills the conditioning results.
+    /// </summary>
     public sealed class LasFile
     {
         public LasFile(string sourceName)
@@ -34,6 +46,29 @@ namespace LasLogs.Core
         public int RecordCount { get { return RecordLines.Length; } }
         public List<Diagnostic> Diagnostics { get; } = new List<Diagnostic>();
         public FileStatus Status { get; set; }
+
+        // ---- set by the Conditioner ----
+        /// <summary>Depth order as found in the file, before any reversal.</summary>
+        public DepthOrder DepthOrder { get; set; }
+        /// <summary>Most common absolute depth interval; NaN when unknown.</summary>
+        public double ModalStep { get; set; } = double.NaN;
+        /// <summary>One entry per <see cref="Concept"/>, indexed by its value; null when nothing was loaded.</summary>
+        public ConceptCurve[] Concepts { get; set; }
+
+        public Diagnostic Add(Severity severity, string code, string message, int firstLine = 0, int lastLine = 0, string curve = null, int count = 1)
+        {
+            var d = new Diagnostic(severity, code, message, firstLine, lastLine, curve) { Count = count };
+            Diagnostics.Add(d);
+            return d;
+        }
+
+        /// <summary>Failed = no records; Partial = any Error diagnostic; otherwise Loaded.</summary>
+        public void UpdateStatus()
+        {
+            Status = RecordCount == 0 ? FileStatus.Failed
+                : Diagnostics.Any(d => d.Severity == Severity.Error) ? FileStatus.Partial
+                : FileStatus.Loaded;
+        }
     }
 
     /// <summary>One <c>MNEM.UNIT VALUE : DESCRIPTION</c> header line.</summary>
@@ -104,7 +139,7 @@ namespace LasLogs.Core
         public string ApiCode { get; }
         public string Description { get; }
         public int Line { get; }
-        /// <summary>One value per record; NaN only where the token was not a number.</summary>
+        /// <summary>One value per record. Raw: NaN only where the token was not a number. Conditioned: nulls are NaN too.</summary>
         public double[] Values { get; set; } = new double[0];
     }
 }

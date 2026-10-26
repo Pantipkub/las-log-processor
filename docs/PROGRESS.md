@@ -39,7 +39,36 @@
 - About 18 s and a 260 MB peak working set (Debug build).
 - Ctrl-Z: 7 files, not the report's 8. The report's 8th (`PnrUniv7-23_1`) is the 0x1A inside the junk line 10508, which is now `BINARY_LINE`.
 
-## Next: Part 2 (batch runner + conditioning + catalog)
-See `docs/PLAN.md` Part 2 and DECISIONS §1–5, §8.
-- Read NULL from `WellItems` (mnemonic `NULL`, raw text in `Value`). The reader has not touched sentinel values.
-- Still to do from report §I.2: S10–S18, S20 (NaN/null depth rows), S21, S23 (locked file → Failed in the runner).
+## Part 2: Batch runner + conditioning + catalog ✅ (2026-10-26)
+- `Program` (App): enumerates `*.las`/`*.LAS` (filtered by extension, not the `*.las` pattern, which also matches `.lasx`), sorted by name. Each file runs in its own try/catch; an exception (I/O, locked file, anything) gives a Failed row with `ExceptionType: message`. Writes `output/conditioning_summary.csv` (one row per file: status, first error, version, wrap, records, depth unit/top/base, original depth order, modal/header step, the four chosen sources, diagnostic counts per severity, distinct codes, elapsed ms). Prints one line per file plus totals and peak working set. `Program` is public so the tests can run a whole batch.
+- `Conditioner.Run(file, catalog)` (Core) works in place on the loaded file, then calls the catalog. Order: declared NULL → reject rows with a missing depth → null policy on the other curves → depth checks → curve selection → `UpdateStatus()`.
+  - Nulls: declared NULL → NaN (`NULL_TO_MISSING` per curve). Exact −999.25 is always missing; when NULL is something else (or missing/non-numeric: `NULL_MISSING`) that gives one `SENTINEL_MISMATCH` per file. `NULL_IS_ZERO` whenever NULL is 0. −9999/−999/−999.2 stay as data with `SUSPECTED_SENTINEL` per curve.
+  - Depth: NaN/NULL depth → row rejected (`DEPTH_INVALID`, Error, so Partial). Strictly decreasing (repeats allowed) → all arrays and `RecordLines` reversed (`DEPTH_REVERSED`). Up and down → file order kept (`DEPTH_NON_MONOTONIC`, count = direction changes, plus repeated values). Repeats in monotonic data → `DEPTH_DUPLICATES`. `NEGATIVE_DEPTH` (Observation).
+  - Steps: modal step = most common absolute interval (rounded to 1e-6). `STEP_MISMATCH` if it differs from |STEP| by more than 1 %. STEP 0 → `STEP_IRREGULAR` (Observation) and no gap check. `DEPTH_GAP` for intervals > 1.5 × modal (monotonic files only). `STRT_MISMATCH`/`STOP_MISMATCH` (Observations) against the file order, tolerance half a step.
+  - Results on `LasFile`: `DepthOrder`, `ModalStep`, `Concepts` (null for files with no records). `LasFile.Add(...)` and `UpdateStatus()` are shared with the reader.
+- `CurveCatalog` (Core) + `src/LasLogs.Core/curve_catalog.csv` (copied next to the exe and the tests). The CSV is the §F.7 tables (including their M/L rows such as `GAMMA`, `GR_CAL`); the "unresolved" names are left out. The unit table, blank-unit rules and QC ranges are constants in `CurveCatalog`.
+  - Selection: catalog order (priority, then row order), then column order. Checks: unit in the concept's table (else `UNIT_UNRECOGNIZED`), neutron description exclusion (DECISIONS §5, revised), at least one valid value, blank unit decided from the 99th percentile (GR/RES always canonical; density p99 ≤ 5; neutron p99 ≤ 1.5 → v/v, ≤ 150 → percent). The same mnemonic passing twice → first one + `AMBIGUOUS_CURVE`.
+  - `ConceptCurve`: `Source` (the file curve, never renamed or converted), `Values` in canonical units (the source array itself when the factor is 1), `Factor`, `Median`, and `Missing` for the plot label ("not in file", "present but all null", "rejected: …").
+  - Codes: `CURVE_MAPPED`, `UNIT_CONVERTED` (Transformations); `UNIT_ALIAS` (`m.ohm`), `UNIT_ASSUMED`, `IMPLAUSIBLE_VALUES` (median outside the §8 range), `RES_NONPOSITIVE` (Warnings); `CONCEPT_UNAVAILABLE`, `NO_REQUIRED_CURVES` (Observations).
+- Tests: 69 in total. `ConditionerTests` covers S10–S18, S20, S21 and the catalog rules; `ProgramTests` runs a batch with empty, binary and locked files (S2, S3, S23). `RealDataTests` now also checks the Part 2 table (about 20 s).
+
+**Full-folder result** (203 files, about 20–30 s, peak working set 285 MB, Debug): 200 Loaded, 3 Partial, 0 exceptions.
+
+| Check | Oracle | Now | Why different |
+|---|---|---|---|
+| Coverage GR / RES / RHOB / NPHI | 182 / 109 / 100 / 124 | 182 / 110 / 101 / 125 | +1 each from MAINCOR; GR also −1: `4246137956_UNIV_NG_5021H_LAS.las` GR unit `aapi` is not in the DECISIONS §4 table (`UNIT_UNRECOGNIZED`) |
+| Depth reversed | 26 | 27 | MAINCOR (recovered in Part 1) is decreasing |
+| Non-monotonic | 1 | 1 | `4200343170_STATE_AQ_8_RUN2.las`: 4 changes, first line 4465, 200 repeated depths |
+| `NULL_IS_ZERO` | 5 | 5 | |
+| K/M3 conversion | 1 file, median ≈ 2.518 | same | |
+| `IMPLAUSIBLE_VALUES` on density in `4246135949_MAIN.las` | yes | yes (DEN median 0.194; GRGC 3.3 gAPI also flagged) | |
+| `NPRL` in `4246135292_MAIN.las` | Limestone | Limestone | |
+
+Other counts, for reference: `STEP_MISMATCH` 2, `STRT_MISMATCH` 2, `STOP_MISMATCH` 3, `DEPTH_GAP` 1 (`4246135949_MAIN`, made by the rejected rows), `NEGATIVE_DEPTH` 5, `SENTINEL_MISMATCH` 2 (the `4238336177` pair, 11,840 each), `SUSPECTED_SENTINEL` 8 (the report's 9 included that pair, which is now `SENTINEL_MISMATCH`, and had no −999.2 mud-log case), `RES_NONPOSITIVE` 19 (the report's 20 minus the `4238336177` pair, whose negatives were −999.25; plus the OPAL `MLR4C`, not investigated), `IMPLAUSIBLE_VALUES` 13 files, `NO_REQUIRED_CURVES` 20 files.
+
+## Next: Part 3 (plotting)
+See `docs/PLAN.md` Part 3 and DECISIONS §7–8.
+- Plot from `file.Curves[0].Values` (depth, increasing unless `DepthOrder == NonMonotonic`) and `file.Concepts[(int)Concept.X].Values` (canonical units, NaN = gap). For non-monotonic files, split the line where the depth direction changes.
+- Empty track label: `ConceptCurve.Missing`. Files with no records (Failed) have `Concepts == null`.
+- Call the plotter inside `Program.ProcessFile`'s try/catch, before the `Row(...)`; add a `plot_file` column.
+- Still open for Part 4: `DUPLICATE_FILE` (needs SHA-256) and the events CSV / Markdown report.

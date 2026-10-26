@@ -363,9 +363,7 @@ namespace LasLogs.Core
                 else if (!dataSeen) Add(Severity.Error, "NO_DATA_SECTION", 0, "no ~A data section found");
                 else Add(Severity.Error, "NO_RECORDS", 0, "~A section has no data records");
             }
-            file.Status = file.RecordCount == 0 ? FileStatus.Failed
-                : file.Diagnostics.Any(d => d.Severity == Severity.Error) ? FileStatus.Partial
-                : FileStatus.Loaded;
+            file.UpdateStatus();
         }
 
         // Undeclared wrap is accepted only if the tokens divide evenly into records and the depth step is constant.

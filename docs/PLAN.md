@@ -27,7 +27,7 @@ Solution: `LasLogs.Core`, `LasLogs.App` and `LasLogs.Tests` (all net48). Also `.
   | `4200346370_20150224_LAS(UA_3001HL_lateral_hole_Mud_log).las` | 40 curves × 8,565 records (comma) |
   | `…9365ST2COMBINED_2_0).las` | 8,616 records (tab) |
 
-## Part 2: Batch runner + conditioning + catalog (≈4 h): phases 3–5
+## Part 2: Batch runner + conditioning + catalog (≈4 h): phases 3–5 ✅
 - `Program`: enumerate files, isolate each file in try/catch, record status and timing, write a summary CSV. Synthetic broken files (empty, binary, locked) end as Failed.
 - `Conditioner`: null policy, depth direction, step/gap/STRT/STOP analysis (DECISIONS §1–3).
 - `CurveCatalog` (CSV data file, seeded from report §F.7) + unit table + QC (DECISIONS §4, §5, §8).

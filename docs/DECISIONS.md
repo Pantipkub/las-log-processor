@@ -1,6 +1,6 @@
 # Data-conditioning decisions (confirmed)
 
-The user confirmed these on 2026-10-25. Rule 8 was revised on 2026-10-26.
+The user confirmed these on 2026-10-25. Rules 5 and 8 were revised on 2026-10-26.
 The evidence (file names, line numbers, counts) is in `../TestData/analysis/LAS_Investigation_Report.md`, §F and §G.
 
 Diagnostic categories:
@@ -44,7 +44,8 @@ Diagnostic categories:
 
 ## 5. Curve names
 - Use the alias catalog (data file, editable without recompiling): concept, mnemonic and priority. The initial content comes from report §F.7.
-- Matching is exact on the mnemonic (case-insensitive, trimmed). The unit must belong to the concept's family. The description must not hit the exclusion list (`crossplot`, `sandstone`, `dolomite`, `correction`, `caliper`, `standoff`, `mud`, `matrix`). The candidate must have at least one valid value.
+- Matching is exact on the mnemonic (case-insensitive, trimmed). The unit must belong to the concept's family. For **neutron porosity only**, the description must not hit the exclusion list (`crossplot`, `sandstone`, `dolomite`, `correction`, `caliper`, `standoff`, `mud`, `matrix`). The candidate must have at least one valid value.
+  *Revised 2026-10-26:* applied to all four concepts, the list rejected good curves: `ZDNC` "Borehole size/mud weight corrected density" (11 files) and `MLR4C` "…adaptive borehole correction" (2 files). The other concepts are already protected by the exact mnemonic and the unit check.
 - Pick the highest priority. If one mnemonic appears twice, take the first and raise Warning `AMBIGUOUS_CURVE`.
 - Medium/Low-confidence names (`GR_1`, `GKUT`, `REST`, `RHOB_SHIFT`, `NPHM`, …) stay **unmapped** and are listed in the report.
 - Duplicate mnemonics must never crash the program: curves are identified by **column position**, not by a dictionary keyed on the name.

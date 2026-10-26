@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\LasLogs.Core\LasLogs.Core.csproj" />
+    <ProjectReference Include="..\..\src\LasLogs.App\LasLogs.App.csproj" />
   </ItemGroup>
 
   <ItemGroup>
