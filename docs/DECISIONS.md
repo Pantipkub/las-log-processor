@@ -1,6 +1,6 @@
 # Data-conditioning decisions (confirmed)
 
-The user confirmed these on 2026-10-25. Rules 5 and 8 were revised on 2026-10-26.
+The user confirmed these on 2026-10-25. Rules 5 and 8 were revised on 2026-10-26. Rules 1 and 5 were extended on 2026-10-27 (placeholder-only curves).
 The evidence (file names, line numbers, counts) is in `../TestData/analysis/LAS_Investigation_Report.md`, §F and §G.
 
 Diagnostic categories:
@@ -15,6 +15,8 @@ Diagnostic categories:
   *Evidence:* `4238336177MAIN.las` declares 0 but contains 11,840 × −999.25.
 - `NULL = 0` is honoured. Warning `NULL_IS_ZERO`, with the count of zeros removed.
 - Undeclared placeholder-looking values (−9999, −999, −999.2) stay as data. Warning `SUSPECTED_SENTINEL`, with counts.
+  *Added 2026-10-27:* if **every** valid value of a candidate curve is such a placeholder, curve selection (§5) does not use it. The track label says "rejected: <curve> has only placeholder values (−999.2)". The values and the warning stay; a curve with only a few placeholders is used as before.
+  *Evidence:* `4200343170_STATE_AQ_8_MUDLOG.las` GAMMA is −999.2 in all 10,781 records; before this rule the GR line was pinned to the 0 edge and the track looked empty with no label.
 - Non-numeric tokens (`********`, `(null)`, `NaN`, `1.#INF`, `-1.#IND`) become `NaN`. Warning `NONNUMERIC_VALUE`.
 - The original NULL text is kept in the model. The source file is the audit copy: diagnostics cite line numbers, not raw values.
 
@@ -44,7 +46,7 @@ Diagnostic categories:
 
 ## 5. Curve names
 - Use the alias catalog (data file, editable without recompiling): concept, mnemonic and priority. The initial content comes from report §F.7.
-- Matching is exact on the mnemonic (case-insensitive, trimmed). The unit must belong to the concept's family. For **neutron porosity only**, the description must not hit the exclusion list (`crossplot`, `sandstone`, `dolomite`, `correction`, `caliper`, `standoff`, `mud`, `matrix`). The candidate must have at least one valid value.
+- Matching is exact on the mnemonic (case-insensitive, trimmed). The unit must belong to the concept's family. For **neutron porosity only**, the description must not hit the exclusion list (`crossplot`, `sandstone`, `dolomite`, `correction`, `caliper`, `standoff`, `mud`, `matrix`). The candidate must have at least one valid value that is not a suspected placeholder (§1, 2026-10-27).
   *Revised 2026-10-26:* applied to all four concepts, the list rejected good curves: `ZDNC` "Borehole size/mud weight corrected density" (11 files) and `MLR4C` "…adaptive borehole correction" (2 files). The other concepts are already protected by the exact mnemonic and the unit check.
 - Pick the highest priority. If one mnemonic appears twice, take the first and raise Warning `AMBIGUOUS_CURVE`.
 - Medium/Low-confidence names (`GR_1`, `GKUT`, `REST`, `RHOB_SHIFT`, `NPHM`, …) stay **unmapped** and are listed in the report.

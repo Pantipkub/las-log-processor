@@ -86,8 +86,20 @@ Other counts, for reference: `STEP_MISMATCH` 2, `STRT_MISMATCH` 2, `STOP_MISMATC
 - Non-monotonic file: the repeated intervals are drawn over each other in the same colour.
 - A long resistivity footer can run a little into the gap between tracks.
 
-## Next: Part 4 (report + README + delivery)
-See `docs/PLAN.md` Part 4 and report §J.
-- Out-of-scale counts are in the diagnostics (`OUT_OF_SCALE`, Observation, per curve); `plot_file` is in the summary.
-- Still open: `DUPLICATE_FILE` (needs SHA-256) and the events CSV / Markdown report.
-- Re-run into `output/` once `output/conditioning_summary.csv` is closed in Excel (the app cannot open it while it is locked, and that error is not caught in `Main`).
+## Part 4: Report + README + delivery ✅ (2026-10-27)
+- **Placeholder-only curves** (user decision 2026-10-27, DECISIONS §1/§5): `CurveCatalog` rejects a candidate whose every valid value is a suspected placeholder (−9999, −999, −999.2; `Conditioner.SuspectedSentinels`). `Missing` = "rejected: GAMMA has only placeholder values (-999.2)". Values and `SUSPECTED_SENTINEL` stay. Only case in the dataset: `4200343170_STATE_AQ_8_MUDLOG.las` GAMMA, so GR coverage is now 181 (`RealDataTests` updated) and `NO_REQUIRED_CURVES` 21.
+- `ReportWriter` (Core) now owns all three outputs; the summary format is unchanged (the code moved from `Program`).
+  - The constructor opens `conditioning_summary.csv`, `conditioning_events.csv` and `conditioning_report.md`, so a locked file fails before the batch: `Program.Main` catches `IOException`/`UnauthorizedAccessException`, prints the file and "close it (e.g. Excel)", and exits with **3**.
+  - `Add(file, plot, ms)` streams the summary row and one event row per diagnostic (`file, well_key, status, severity, code, curve, count, first_line, last_line, message`), and keeps only counts plus the warning/error rows for the Markdown.
+  - `Finish(elapsed, peakMb)` writes the Markdown: run header, dataset overview, curves used (coverage, not in file / all null / rejected, out-of-scale files and points from `OUT_OF_SCALE`, file with the most), medium/low-confidence mappings, every (severity, code) with files, summed count and the first real message, the duplicates, the well keys, and the warnings/errors per file (55 files) with a link to the plot.
+- `LasFile.WellKey()` moved from `LogPlotter` (Core needs it for the events CSV).
+- An exception in `ProcessFile` now becomes a `LasFile` with one `FILE_FAILED` Error (same Failed row and `IOException: …` reason as before, now also in the events CSV and the report).
+- `DUPLICATE_FILE`: SHA-256 of the file bytes (a second read; the OS cache keeps it cheap). A repeat gets an Observation naming the first file and is still processed and plotted. 11 files flagged (the 11 pairs from the Part 3 note).
+- Tests: 73 (71 + 2 new; the opt-in real-data test is one of them). New: placeholder-only curve; a batch with a byte-identical copy checks `DUPLICATE_FILE`, `FILE_FAILED` and `CURVE_MAPPED` rows in the events CSV and the report; a locked summary CSV gives exit code 3 and no plots.
+- Docs: README (build & run, outputs, exit codes, design, decisions table with one real example each, known limitations, how AI was used: approved by the user), `docs/GUIDE.md` (system guide for the user: basics, pipeline, every decision and why, reading plots and reports, where to change things, reviewer Q&A).
+
+**Final run** (into `output/`, Debug via `dotnet run`): 203 files in 33.1 s, peak working set 309 MB, 200 Loaded, 3 Partial, 0 Failed. 203 PNGs (45.4 MB, 64 well folders, no stale files), 203 summary rows, 4,594 events. Coverage GR 181 / RES 110 / RHOB 101 / NPHI 125. `OUT_OF_SCALE` in 169 files.
+
+**Delivery:** the user chose a zip (not committing `output/`): `../LasLogs_output_2026-10-27.zip` (33 MB, 206 files under `output/`), to attach to the email.
+
+**Left for the user:** read `docs/GUIDE.md`; optional Thai copy outside the repo; push when ready (deadline 2026-10-28 20:00 ICT).

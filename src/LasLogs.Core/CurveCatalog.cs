@@ -218,6 +218,9 @@ namespace LasLogs.Core
 
             double[] sorted = SortedValid(curve.Values);
             if (sorted.Length == 0) return "all null";
+            // DECISIONS 1 (2026-10-27): e.g. GAMMA = -999.2 in every record of 4200343170_STATE_AQ_8_MUDLOG.las.
+            if (sorted.All(v => Array.IndexOf(Conditioner.SuspectedSentinels, v) >= 0))
+                return "has only placeholder values (" + string.Join(", ", sorted.Distinct().Select(F)) + ")";
 
             if (kind == "blank")
             {

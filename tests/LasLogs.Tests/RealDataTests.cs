@@ -90,7 +90,7 @@ namespace LasLogs.Tests
             Func<Concept, int> coverage = c => files.Values.Count(f => f.Concepts != null && f.Concepts[(int)c].Source != null);
             output.WriteLine("coverage GR " + coverage(Concept.GammaRay) + " / RES " + coverage(Concept.DeepResistivity)
                 + " / RHOB " + coverage(Concept.BulkDensity) + " / NPHI " + coverage(Concept.NeutronPorosity));
-            Assert.Equal(182, coverage(Concept.GammaRay));          // 182 - 1 ('aapi' unit not mapped) + 1 (MAINCOR)
+            Assert.Equal(181, coverage(Concept.GammaRay));          // 182 + 1 (MAINCOR) - 1 ('aapi' unit not mapped) - 1 (MUDLOG GAMMA only -999.2)
             Assert.Equal(110, coverage(Concept.DeepResistivity));   // 109 + MAINCOR
             Assert.Equal(101, coverage(Concept.BulkDensity));       // 100 + MAINCOR
             Assert.Equal(125, coverage(Concept.NeutronPorosity));   // 124 + MAINCOR

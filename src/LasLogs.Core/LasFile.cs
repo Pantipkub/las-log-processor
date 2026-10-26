@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace LasLogs.Core
@@ -68,6 +70,23 @@ namespace LasLogs.Core
             Status = RecordCount == 0 ? FileStatus.Failed
                 : Diagnostics.Any(d => d.Severity == Severity.Error) ? FileStatus.Partial
                 : FileStatus.Loaded;
+        }
+
+        /// <summary>First 10 digits of the UWI or API header (state + county + well), else the file name without extension.</summary>
+        public string WellKey()
+        {
+            foreach (string mnemonic in new[] { "UWI", "API" })
+            {
+                HeaderItem item = WellItems.FirstOrDefault(h => string.Equals(h.Mnemonic, mnemonic, StringComparison.OrdinalIgnoreCase));
+                if (item == null) continue;
+                // Some LAS 1.2 files put the number in the other field ("API . API NUMBER: 42-461-37900").
+                foreach (string text in new[] { item.Value, item.Description })
+                {
+                    string digits = new string(text.Where(char.IsDigit).ToArray());
+                    if (digits.Length >= 10) return digits.Substring(0, 10);
+                }
+            }
+            return Path.GetFileNameWithoutExtension(SourceName);
         }
     }
 

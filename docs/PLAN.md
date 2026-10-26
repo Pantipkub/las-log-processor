@@ -57,7 +57,7 @@ Solution: `LasLogs.Core`, `LasLogs.App` and `LasLogs.Tests` (all net48). Also `.
   | a mud log | 0 concepts |
   | `4238337564_…triplecmi_004_MD.las` | unit conversion |
 
-## Part 4: Report + README + delivery (≈2 h): phases 7–8
+## Part 4: Report + README + delivery (≈2 h): phases 7–8 ✅
 - `ReportWriter`: `conditioning_report.md`, `conditioning_events.csv` and `conditioning_summary.csv` (design in report §J).
 - README sections: build & run; design; conditioning decisions (with one real example each); known limitations; how AI was used (**the user writes or approves this**). Include timing and memory numbers from a full run.
 - Final full run. Decide on committing `output/` (≈50 MB or less) or attaching a zip.

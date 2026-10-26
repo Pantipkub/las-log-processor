@@ -13,8 +13,8 @@ namespace LasLogs.Core
     public static class Conditioner
     {
         private const double StandardNull = -999.25;
-        // Undeclared values that look like placeholders: kept as data, but flagged.
-        private static readonly double[] SuspectedSentinels = { -9999, -999, -999.2 };
+        // Undeclared values that look like placeholders: kept as data, but flagged. A curve with nothing else is not plotted (CurveCatalog).
+        internal static readonly double[] SuspectedSentinels = { -9999, -999, -999.2 };
 
         public static void Run(LasFile file, CurveCatalog catalog)
         {

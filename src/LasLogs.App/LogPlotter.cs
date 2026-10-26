@@ -99,7 +99,7 @@ namespace LasLogs.App
                 model.Axes.Add(TrackAxis(i, "bottom" + i, AxisPosition.Bottom, footer));
             }
 
-            string relative = "plots/" + Safe(WellKey(file)) + "/" + Safe(Path.GetFileNameWithoutExtension(file.SourceName)) + ".png";
+            string relative = "plots/" + Safe(file.WellKey()) + "/" + Safe(Path.GetFileNameWithoutExtension(file.SourceName)) + ".png";
             // "\\?\" lifts the 260-character path limit: some dataset file names are over 100 characters long.
             string path = @"\\?\" + Path.GetFullPath(Path.Combine(outputFolder, relative));
             Directory.CreateDirectory(Path.GetDirectoryName(path));
@@ -163,23 +163,6 @@ namespace LasLogs.App
                 axis.MajorGridlineColor = OxyColor.FromAColor(40, OxyColors.Black);
             }
             return axis;
-        }
-
-        /// <summary>First 10 digits of the UWI or API header (state + county + well), else the file name without extension.</summary>
-        public static string WellKey(LasFile file)
-        {
-            foreach (string mnemonic in new[] { "UWI", "API" })
-            {
-                HeaderItem item = file.WellItems.FirstOrDefault(h => string.Equals(h.Mnemonic, mnemonic, StringComparison.OrdinalIgnoreCase));
-                if (item == null) continue;
-                // Some LAS 1.2 files put the number in the other field ("API . API NUMBER: 42-461-37900").
-                foreach (string text in new[] { item.Value, item.Description })
-                {
-                    string digits = new string(text.Where(char.IsDigit).ToArray());
-                    if (digits.Length >= 10) return digits.Substring(0, 10);
-                }
-            }
-            return Path.GetFileNameWithoutExtension(file.SourceName);
         }
 
         private static string Header(LasFile file, string mnemonic)

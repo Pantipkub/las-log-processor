@@ -92,6 +92,20 @@ namespace LasLogs.Tests
             Assert.Equal(new[] { -9999.0, -999, 50 }, f.Curves[1].Values);
             Assert.Equal(2, Single(f, "SUSPECTED_SENTINEL", "GR").Count);
             Assert.Equal(1, Single(f, "SUSPECTED_SENTINEL", "RHOB").Count);
+            Assert.Equal("GR", Concept(f, LasLogs.Core.Concept.GammaRay).Source.Mnemonic);   // one real value is enough
+        }
+
+        [Fact] // GAMMA in 4200343170_STATE_AQ_8_MUDLOG.las
+        public void Curve_with_only_placeholder_values_is_not_plotted_but_kept()
+        {
+            LasFile f = Run(GrRhob, "100.0 -999.2 2.45\n100.5 -999.25 2.46\n101.0 -999.2 2.47\n");
+
+            ConceptCurve gr = Concept(f, LasLogs.Core.Concept.GammaRay);
+            Assert.Null(gr.Source);
+            Assert.Equal("rejected: GR has only placeholder values (-999.2)", gr.Missing);
+            Assert.Equal(new[] { -999.2, double.NaN, -999.2 }, f.Curves[1].Values);
+            Assert.Equal(2, Single(f, "SUSPECTED_SENTINEL", "GR").Count);
+            Assert.Contains(f.Diagnostics, d => d.Code == "CONCEPT_UNAVAILABLE" && d.Message.StartsWith("GammaRay"));
         }
 
         [Fact] // S11

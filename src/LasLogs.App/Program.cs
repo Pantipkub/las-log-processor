@@ -4,23 +4,13 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text;
+using System.Security.Cryptography;
 using LasLogs.Core;
 
 namespace LasLogs.App
 {
     public static class Program
     {
-        public const string SummaryFile = "conditioning_summary.csv";
-
-        private static readonly string[] Columns =
-        {
-            "file", "status", "reason", "las_version", "wrap", "records_loaded", "curves_declared",
-            "depth_unit", "depth_top", "depth_base", "original_depth_order", "modal_step", "header_step",
-            "gamma_source", "resistivity_source", "density_source", "neutron_source",
-            "transformations", "warnings", "errors", "codes", "plot_file", "elapsed_ms",
-        };
-
         public static int Main(string[] args)
         {
             if (args.Length != 2)
@@ -51,107 +41,77 @@ namespace LasLogs.App
                 .Where(p => string.Equals(Path.GetExtension(p), ".las", StringComparison.OrdinalIgnoreCase))
                 .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
-            Directory.CreateDirectory(output);
-            var total = Stopwatch.StartNew();
-            var statuses = new SortedDictionary<string, int>();
 
-            using (var csv = new StreamWriter(Path.Combine(output, SummaryFile), false, new UTF8Encoding(false)))
+            ReportWriter report;
+            try
             {
-                csv.WriteLine(string.Join(",", Columns));
-                for (int i = 0; i < paths.Length; i++)
-                {
-                    string[] row = ProcessFile(paths[i], catalog, output);
-                    csv.WriteLine(string.Join(",", row.Select(Csv)));
-                    int count;
-                    statuses.TryGetValue(row[1], out count);
-                    statuses[row[1]] = count + 1;
-                    Console.WriteLine("[" + (i + 1) + "/" + paths.Length + "] " + row[1].PadRight(7) + " " + row[0] + " (" + row[row.Length - 1] + " ms)");
-                }
+                Directory.CreateDirectory(output);
+                report = new ReportWriter(output, input);
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                // Typically conditioning_summary.csv still open in Excel.
+                Console.Error.WriteLine("Cannot write the reports in " + output + ": " + ex.Message);
+                Console.Error.WriteLine("Close the file if another program (e.g. Excel) has it open, then run again.");
+                return 3;
             }
 
-            Console.WriteLine(paths.Length + " files in " + total.Elapsed.TotalSeconds.ToString("0.0", CultureInfo.InvariantCulture) + " s: "
-                + string.Join(", ", statuses.Select(s => s.Value + " " + s.Key)) + "; peak working set "
-                + (Process.GetCurrentProcess().PeakWorkingSet64 >> 20) + " MB");
-            Console.WriteLine("Summary: " + Path.Combine(output, SummaryFile));
+            var total = Stopwatch.StartNew();
+            var statuses = new SortedDictionary<string, int>();
+            var firstByHash = new Dictionary<string, string>();
+            using (report)
+            {
+                for (int i = 0; i < paths.Length; i++)
+                {
+                    var watch = Stopwatch.StartNew();
+                    string plot;
+                    LasFile file = ProcessFile(paths[i], catalog, output, firstByHash, out plot);
+                    report.Add(file, plot, watch.ElapsedMilliseconds);
+                    int count;
+                    statuses.TryGetValue(file.Status.ToString(), out count);
+                    statuses[file.Status.ToString()] = count + 1;
+                    Console.WriteLine("[" + (i + 1) + "/" + paths.Length + "] " + file.Status.ToString().PadRight(7) + " " + file.SourceName + " (" + watch.ElapsedMilliseconds + " ms)");
+                }
+                long peakMb = Process.GetCurrentProcess().PeakWorkingSet64 >> 20;
+                report.Finish(total.Elapsed, peakMb);
+                Console.WriteLine(paths.Length + " files in " + total.Elapsed.TotalSeconds.ToString("0.0", CultureInfo.InvariantCulture) + " s: "
+                    + string.Join(", ", statuses.Select(s => s.Value + " " + s.Key)) + "; peak working set " + peakMb + " MB");
+            }
+            Console.WriteLine("Reports: " + string.Join(", ", new[] { ReportWriter.SummaryFile, ReportWriter.EventsFile, ReportWriter.ReportFile }
+                .Select(f => Path.Combine(output, f))));
             return 0;
         }
 
-        // One file, isolated: any exception (reading, conditioning or plotting) becomes a Failed row and the batch moves on.
-        private static string[] ProcessFile(string path, CurveCatalog catalog, string output)
+        // One file, isolated: any exception (reading, hashing, conditioning or plotting) becomes a Failed file with a
+        // FILE_FAILED error, and the batch moves on.
+        private static LasFile ProcessFile(string path, CurveCatalog catalog, string output, Dictionary<string, string> firstByHash, out string plot)
         {
-            var watch = Stopwatch.StartNew();
-            string[] row;
+            plot = "";
             try
             {
                 LasFile file = LasReader.Read(path);
+                string hash = Sha256(path), first;
+                if (firstByHash.TryGetValue(hash, out first))
+                    file.Add(Severity.Observation, "DUPLICATE_FILE", "byte-identical to " + first + " (SHA-256 " + hash.Substring(0, 8) + "); processed anyway");
+                else firstByHash[hash] = file.SourceName;
                 Conditioner.Run(file, catalog);
-                string plot = LogPlotter.Plot(file, output);
-                row = Row(file, plot);
+                plot = LogPlotter.Plot(file, output);
+                return file;
             }
             catch (Exception ex)
             {
-                row = new string[Columns.Length];
-                row[0] = Path.GetFileName(path);
-                row[1] = FileStatus.Failed.ToString();
-                row[2] = ex.GetType().Name + ": " + ex.Message;
+                var failed = new LasFile(Path.GetFileName(path));
+                failed.Add(Severity.Error, "FILE_FAILED", ex.GetType().Name + ": " + ex.Message);
+                failed.UpdateStatus();
+                return failed;
             }
-            row[row.Length - 1] = watch.ElapsedMilliseconds.ToString(CultureInfo.InvariantCulture);
-            return row;
         }
 
-        private static string[] Row(LasFile file, string plot)
+        private static string Sha256(string path)
         {
-            Diagnostic error = file.Diagnostics.FirstOrDefault(d => d.Severity == Severity.Error);
-            bool loaded = file.RecordCount > 0;
-            double[] depth = loaded ? file.Curves[0].Values : null;
-            HeaderItem step = file.WellItems.FirstOrDefault(i => string.Equals(i.Mnemonic, "STEP", StringComparison.OrdinalIgnoreCase));
-            return new[]
-            {
-                file.SourceName,
-                file.Status.ToString(),
-                error == null ? "" : error.Message,
-                Num(file.Version),
-                file.Wrap ? "YES" : "NO",
-                file.RecordCount.ToString(CultureInfo.InvariantCulture),
-                file.Curves.Count.ToString(CultureInfo.InvariantCulture),
-                file.Curves.Count > 0 ? file.Curves[0].Unit : "",
-                loaded ? Num(depth.Min()) : "",
-                loaded ? Num(depth.Max()) : "",
-                loaded ? file.DepthOrder.ToString() : "",
-                Num(file.ModalStep),
-                step == null ? "" : step.Value,
-                Source(file, Concept.GammaRay),
-                Source(file, Concept.DeepResistivity),
-                Source(file, Concept.BulkDensity),
-                Source(file, Concept.NeutronPorosity),
-                Count(file, Severity.Transformation),
-                Count(file, Severity.Warning),
-                Count(file, Severity.Error),
-                string.Join(" ", file.Diagnostics.Select(d => d.Code).Distinct()),
-                plot,
-                "",   // elapsed_ms, filled by ProcessFile
-            };
-        }
-
-        private static string Source(LasFile file, Concept concept)
-        {
-            return file.Concepts == null || file.Concepts[(int)concept].Source == null ? "" : file.Concepts[(int)concept].Source.Mnemonic;
-        }
-
-        private static string Count(LasFile file, Severity severity)
-        {
-            return file.Diagnostics.Count(d => d.Severity == severity).ToString(CultureInfo.InvariantCulture);
-        }
-
-        private static string Num(double v)
-        {
-            return double.IsNaN(v) ? "" : v.ToString("R", CultureInfo.InvariantCulture);
-        }
-
-        private static string Csv(string field)
-        {
-            if (field == null) return "";
-            return field.IndexOfAny(new[] { ',', '"', '\n', '\r' }) < 0 ? field : "\"" + field.Replace("\"", "\"\"") + "\"";
+            using (var sha = SHA256.Create())
+            using (var stream = File.OpenRead(path))
+                return BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "");
         }
     }
 }
