@@ -7,7 +7,7 @@ Expected numbers come from the investigation (`../TestData/analysis/LAS_Investig
 Solution: `LasLogs.Core`, `LasLogs.App` and `LasLogs.Tests` (all net48). Also `.gitignore`/`.gitattributes`, `CLAUDE.md`, `docs/`, a README with the required headings, and VS Code build/launch config.
 **Done when:** `dotnet build` and `dotnet test` succeed on a clean clone.
 
-## Part 1: LAS reader (≈4 h): report roadmap phases 1–2
+## Part 1: LAS reader (≈4 h): report roadmap phases 1–2 ✅
 - `HeaderLine` parser: the first dot ends the mnemonic, the first space after it ends the unit, the last colon starts the description. LAS 1.2 keeps `~W` values in the description field (except STRT/STOP/STEP/NULL).
 - Section state machine (only the first letter after `~` matters; LAS 3.0 names per DECISIONS §9). Model: `LasFile` and `CurveDef` (by position), plus `Diagnostic`.
 - Data: unwrapped, wrapped and `DLM` (comma/tab). Comment/blank/Ctrl-Z/NUL lines are handled. Wrong-count rows are rejected; truncated records are rejected; undeclared wrap is recovered (DECISIONS §6).
