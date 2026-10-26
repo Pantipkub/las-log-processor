@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- 64-bit process on 64-bit Windows: no 2-4 GB address-space limit. -->
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LasLogs.Core\LasLogs.Core.csproj" />
+  </ItemGroup>
+</Project>

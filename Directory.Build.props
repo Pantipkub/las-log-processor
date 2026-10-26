@@ -1,0 +1,12 @@
+<Project>
+  <!-- Shared by every project: .NET Framework 4.8 with the C# version it officially supports. -->
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>7.3</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Lets `dotnet build` work on machines without the .NET Framework 4.8 Developer Pack. -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

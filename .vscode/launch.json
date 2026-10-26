@@ -1,0 +1,15 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "LasLogs.App (all TestData)",
+      "type": "clr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/src/LasLogs.App/bin/Debug/net48/LasLogs.App.exe",
+      "args": ["${workspaceFolder}/../TestData/TestData", "${workspaceFolder}/output"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    }
+  ]
+}

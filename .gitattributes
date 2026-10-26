@@ -1,0 +1,5 @@
+* text=auto
+
+# LAS test fixtures must keep their exact bytes (CRLF/LF/CR, NUL, Ctrl-Z cases are under test).
+*.las -text
+*.LAS -text
