@@ -18,7 +18,7 @@ namespace LasLogs.App
             "file", "status", "reason", "las_version", "wrap", "records_loaded", "curves_declared",
             "depth_unit", "depth_top", "depth_base", "original_depth_order", "modal_step", "header_step",
             "gamma_source", "resistivity_source", "density_source", "neutron_source",
-            "transformations", "warnings", "errors", "codes", "elapsed_ms",
+            "transformations", "warnings", "errors", "codes", "plot_file", "elapsed_ms",
         };
 
         public static int Main(string[] args)
@@ -60,7 +60,7 @@ namespace LasLogs.App
                 csv.WriteLine(string.Join(",", Columns));
                 for (int i = 0; i < paths.Length; i++)
                 {
-                    string[] row = ProcessFile(paths[i], catalog);
+                    string[] row = ProcessFile(paths[i], catalog, output);
                     csv.WriteLine(string.Join(",", row.Select(Csv)));
                     int count;
                     statuses.TryGetValue(row[1], out count);
@@ -76,8 +76,8 @@ namespace LasLogs.App
             return 0;
         }
 
-        // One file, isolated: any exception becomes a Failed row and the batch moves on.
-        private static string[] ProcessFile(string path, CurveCatalog catalog)
+        // One file, isolated: any exception (reading, conditioning or plotting) becomes a Failed row and the batch moves on.
+        private static string[] ProcessFile(string path, CurveCatalog catalog, string output)
         {
             var watch = Stopwatch.StartNew();
             string[] row;
@@ -85,7 +85,8 @@ namespace LasLogs.App
             {
                 LasFile file = LasReader.Read(path);
                 Conditioner.Run(file, catalog);
-                row = Row(file);
+                string plot = LogPlotter.Plot(file, output);
+                row = Row(file, plot);
             }
             catch (Exception ex)
             {
@@ -98,7 +99,7 @@ namespace LasLogs.App
             return row;
         }
 
-        private static string[] Row(LasFile file)
+        private static string[] Row(LasFile file, string plot)
         {
             Diagnostic error = file.Diagnostics.FirstOrDefault(d => d.Severity == Severity.Error);
             bool loaded = file.RecordCount > 0;
@@ -127,6 +128,7 @@ namespace LasLogs.App
                 Count(file, Severity.Warning),
                 Count(file, Severity.Error),
                 string.Join(" ", file.Diagnostics.Select(d => d.Code).Distinct()),
+                plot,
                 "",   // elapsed_ms, filled by ProcessFile
             };
         }

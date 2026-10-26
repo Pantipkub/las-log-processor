@@ -43,7 +43,7 @@ Solution: `LasLogs.Core`, `LasLogs.App` and `LasLogs.Tests` (all net48). Also `.
   | `IMPLAUSIBLE_VALUES` | raised for density in `4246135949_MAIN.las` |
   | Duplicate `NPRL` in `4246135292_MAIN.las` | "Limestone" one chosen |
 
-## Part 3: Plotting (≈2.5 h): phase 6
+## Part 3: Plotting (≈2.5 h): phase 6 ✅
 - 30-minute OxyPlot spike first: reversed depth axis, `LogarithmicAxis`, two top axes in one track, NaN gaps, PNG export on net48. Fallback: one PlotModel per track, stitched with System.Drawing.
 - `LogPlotter` per DECISIONS §7–8. Output: `output/plots/<wellKey>/<file>.png`.
 - **Done when** these look right, checked by eye:
