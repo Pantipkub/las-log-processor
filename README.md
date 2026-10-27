@@ -31,6 +31,8 @@ Every `.las`/`.LAS` file in the input folder is processed (the dataset has 203; 
 | `conditioning_events.csv` | One row per diagnostic: file, well key, status, severity, code, curve, count, first/last source line, message. |
 | `conditioning_report.md` | Dataset overview, curves used, out-of-scale counts, every code with its file count, duplicates, and the warnings/errors per file. |
 
+**Use an empty output folder for each input set.** A run overwrites the three report files and the PNGs with the same names, but it never deletes anything (the output folder may hold other files). Plots from an earlier run on other files therefore stay next to the new ones, while the reports describe only the new run.
+
 Exit codes: 0 done (individual files may still be Failed; see the summary), 2 bad arguments or missing catalog, 3 an output file cannot be written (for example `conditioning_summary.csv` is open in Excel: close it and run again).
 
 **Final run** (2026-10-27, Debug build via `dotnet run`, one thread, on the development laptop): 203 files in **33.1 s**, **peak working set 309 MB**. 200 Loaded, 3 Partial, 0 Failed. 203 PNGs (45 MB), 4,594 events.
@@ -90,6 +92,7 @@ The full, binding rules are in [docs/DECISIONS.md](docs/DECISIONS.md); [docs/GUI
 - **Units are trusted.** A unit that is wrong in the file stays wrong (only a QC warning). Spellings outside the table (`aapi`) are not mapped.
 - **`NULL = 0` loses real zeros** in 5 files; the source format cannot tell them apart.
 - **Fixed display scales and QC ranges are conventions**, not computed from the data. A petrophysicist should tune them for this basin. A curve far outside the scale shows as a line on the track edge (e.g. `39399.LAS` above about 5,800 ft, probably a cased-hole interval: resistivity on the 0.2 edge, density flipping between both edges).
+- **Old plots are not removed:** reusing an output folder for a different input set leaves the earlier plots there (see "How to build and run").
 - **Plot details:** in the non-monotonic file the repeated intervals are drawn over each other in the same colour; a long resistivity footer can run into the gap between tracks.
 - **Scope:** deep resistivity only (no shallow overlay); one plot per file (no splicing of runs or wells); depth in the file's own unit (no metric conversion); no resampling.
 - **LAS 3.0:** the LAS 2.0-compatible subset only; extra sections are skipped and only the first data set is loaded.
