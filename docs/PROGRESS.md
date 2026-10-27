@@ -103,3 +103,8 @@ Other counts, for reference: `STEP_MISMATCH` 2, `STRT_MISMATCH` 2, `STOP_MISMATC
 **Delivery:** the user chose a zip (not committing `output/`): `../LasLogs_output_2026-10-27.zip` (33 MB, 206 files under `output/`), to attach to the email.
 
 **Left for the user:** read `docs/GUIDE.md`; optional Thai copy outside the repo; push when ready (deadline 2026-10-28 20:00 ICT).
+
+### After Part 4 (2026-10-27)
+- The investigation scripts are now in `tools/investigation/` (read-only Python, analysis only; README explains the steps). The report itself stays outside the repo.
+- `.vscode/launch.json` has a second configuration, "LasLogs.App (choose folders)", that asks for the input and output folders, for running on LAS files other than the dataset. README "How to build and run" describes both.
+- `docs/GUIDE.md` section 0: the order to read the project and the steps before changing it.

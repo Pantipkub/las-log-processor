@@ -14,7 +14,13 @@ dotnet test LasLogs.sln
 dotnet run --project src/LasLogs.App -- <input-folder> <output-folder>
 ```
 
-For this dataset: `dotnet run --project src/LasLogs.App -- ../TestData/TestData output`. You can also open `LasLogs.sln` in Visual Studio 2022.
+For this dataset: `dotnet run --project src/LasLogs.App -- ../TestData/TestData output`. Any other folder of LAS files works the same way: the program has no file-specific logic.
+
+**From VS Code** (C# Dev Kit installed): open the repo folder, choose a configuration in Run and Debug, then press F5. `.vscode/launch.json` has two:
+- **LasLogs.App (all TestData)**: input `../TestData/TestData`, output `output`.
+- **LasLogs.App (choose folders)**: asks for the input and output folders when it starts (absolute paths, or relative to the repo).
+
+You can also open `LasLogs.sln` in Visual Studio 2022 and set the two folders as the App project's command-line arguments.
 
 Every `.las`/`.LAS` file in the input folder is processed (the dataset has 203; the brief mentions 50). The output folder gets:
 
@@ -96,7 +102,7 @@ The full, binding rules are in [docs/DECISIONS.md](docs/DECISIONS.md); [docs/GUI
 
 I used Claude Code (Anthropic's coding assistant) as a pair programmer, in small steps with my review at each one:
 
-- **Investigation:** Claude wrote read-only Python scripts that scanned all 203 files and wrote an investigation report (not part of the submission). The numbers in `docs/PLAN.md` come from it and serve as acceptance checks.
+- **Investigation:** Claude wrote read-only Python scripts that scanned all 203 files and wrote an investigation report. The scripts are in [tools/investigation/](tools/investigation/) (analysis only; the C# program does not use them); the report is kept outside the repo. The numbers in `docs/PLAN.md` come from it and serve as acceptance checks.
 - **Decisions:** Claude proposed the conditioning rules with evidence from the files; I chose and confirmed each one (dates in `docs/DECISIONS.md`). For example, after seeing an empty GR track in a mud log, I approved the rule for curves with only placeholder values.
 - **Code and tests:** Claude wrote most of the C# code and the unit tests, one part per session (`docs/PLAN.md`, `docs/PROGRESS.md`), under the rules in `CLAUDE.md` (net48 and C# 7.3, no LAS libraries, Latin-1 reading, no resampling). I ran the build and the tests, reviewed the changes, and checked the plots by eye.
 - **Checks against the raw data:** when something looked odd I asked for it to be traced back to the source file, e.g. the noisy shallow part of `39399.LAS` (real values in the file, not nulls).

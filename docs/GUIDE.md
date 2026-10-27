@@ -5,7 +5,34 @@ This guide is for someone who is new to well logs and needs to understand, expla
 Where the rules live:
 - `docs/DECISIONS.md`: the binding rules (short).
 - This guide: what the rules mean and **why** they are right.
-- `../TestData/analysis/LAS_Investigation_Report.md` (outside the repo): the full evidence; sections C (basics), F (findings) and G (decision options).
+- `../TestData/analysis/LAS_Investigation_Report.md` (outside the repo): the full evidence; sections C (basics), F (findings) and G (decision options). The scripts that produced it are in `tools/investigation/`.
+
+## 0. Reading order (to understand or change the whole project)
+
+The code is about 1,500 lines in 8 files, plus about 1,000 lines of tests. Read in this order; each step builds on the one before.
+
+| # | Read | Why / what to look for |
+|---|---|---|
+| 1 | `README.md` | what the program does, how to run it, the decisions table |
+| 2 | This guide, sections 1–3 | the domain basics and every rule with its reason |
+| 3 | `docs/DECISIONS.md` | the binding rules in short form; a code change must not break them |
+| 4 | `src/LasLogs.Core/Diagnostic.cs`, `LasFile.cs` | the data model: a file, its header items, its curves (`double[]` per column), its diagnostics, its status |
+| 5 | `src/LasLogs.App/Program.cs` | the whole flow on one screen: `Main` (files, report, totals) and `ProcessFile` (read → hash → condition → plot) |
+| 6 | `src/LasLogs.Core/LasReader.cs` (largest, 441 lines) | `Read(TextReader, name)`: the section loop, header lines (`HeaderItem.Parse` in `LasFile.cs`), then the data part (unwrapped, wrapped, undeclared wrap) |
+| 7 | `src/LasLogs.Core/Conditioner.cs` | `Run` shows the order: declared NULL → reject rows without depth → nulls per curve → depth checks → curve selection → status |
+| 8 | `src/LasLogs.Core/CurveCatalog.cs` + `curve_catalog.csv` | the constants at the top (units, blank-unit rules, QC ranges, exclusion words), then `Select` → `Check` → `Use` |
+| 9 | `src/LasLogs.App/LogPlotter.cs` | the scale arrays at the top, `Plot` (layout, labels, footers), `Points` (edge pinning and line breaks) |
+| 10 | `src/LasLogs.Core/ReportWriter.cs` | `Add` (one summary row + event rows per file, totals) and `Finish` (the Markdown) |
+| 11 | `tests/LasLogs.Tests/` | one test file per step: `HeaderItemTests`, `LasReaderTests`, `ConditionerTests`, `LogPlotterTests`, `ProgramTests`, `RealDataTests`. Test names say the rule; `Fixtures/README.md` names the real file behind each excerpt |
+| 12 | `docs/PLAN.md`, `docs/PROGRESS.md` | how it was built part by part, what changed and why, the numbers each part was checked against |
+| 13 | `output/conditioning_report.md` and a few plots (section 4) | what the code produces on the real data |
+
+**Before you change something:**
+1. Find the rule in `docs/DECISIONS.md`. If the change alters a rule, update that file (with the date) too.
+2. Find the place in the code with the table in section 6.
+3. Add or change a test first; assert the diagnostic **code**, not the message text.
+4. `dotnet build LasLogs.sln`, `dotnet test LasLogs.sln`, then run the whole folder and check the report totals and a few plots.
+5. Add a note to `docs/PROGRESS.md`.
 
 ## 1. The basics
 
@@ -225,7 +252,7 @@ All three are in the output folder.
 | Neutron exclusion words | `ExcludedWords` in `CurveCatalog.cs` |
 | Add a report column | `SummaryColumns` + `SummaryRow` in `src/LasLogs.Core/ReportWriter.cs` |
 
-After a change: `dotnet build LasLogs.sln`, `dotnet test LasLogs.sln`, then run the app.
+After a change: `dotnet build LasLogs.sln`, `dotnet test LasLogs.sln`, then run the app. In VS Code, F5 with "LasLogs.App (all TestData)" runs the dataset; "LasLogs.App (choose folders)" asks for any input and output folder (e.g. the reviewers' own LAS files).
 
 ## 7. Questions a reviewer may ask
 

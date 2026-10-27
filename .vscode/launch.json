@@ -10,6 +10,30 @@
       "args": ["${workspaceFolder}/../TestData/TestData", "${workspaceFolder}/output"],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal"
+    },
+    {
+      "name": "LasLogs.App (choose folders)",
+      "type": "clr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/src/LasLogs.App/bin/Debug/net48/LasLogs.App.exe",
+      "args": ["${input:inputFolder}", "${input:outputFolder}"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "inputFolder",
+      "type": "promptString",
+      "description": "Folder with the LAS files (absolute, or relative to the repo)",
+      "default": "../TestData/TestData"
+    },
+    {
+      "id": "outputFolder",
+      "type": "promptString",
+      "description": "Output folder for plots and reports",
+      "default": "output"
     }
   ]
 }
